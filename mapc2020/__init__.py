@@ -32,8 +32,10 @@ class AgentProtocol(asyncio.Protocol):
 
         self.sim_started = asyncio.Event()
         self.action_requested = asyncio.Event()
+        self.satus_updated = asyncio.Event()
         self.static = None
         self.dynamic = None
+        self.status = None
         self.end = None
 
     def connection_made(self, transport):
@@ -43,6 +45,7 @@ class AgentProtocol(asyncio.Protocol):
         self.disconnected.clear()
         self.sim_started.clear()
         self.action_requested.clear()
+        self.status_updated.clear()
         LOGGER.info("%s: Connection made", self)
 
         self.send_message({
@@ -80,6 +83,8 @@ class AgentProtocol(asyncio.Protocol):
             self.handle_request_action(message["content"])
         elif message["type"] == "bye":
             self.handle_bye(message["content"])
+        elif message["type"] == "status-response":
+            self.handle_status_response(message["content"])
         else:
             LOGGER.warning("%s: Unknown message type: %s", self, message["type"])
 
@@ -100,3 +105,7 @@ class AgentProtocol(asyncio.Protocol):
 
     def handle_bye(self, _content):
         self.fatal = Bye()
+
+    def handle_status_response(self, content):
+        self.status = content
+        self.status_updated.set()
