@@ -22,14 +22,22 @@ class AgentProtocol(asyncio.Protocol):
         self.pw = pw
 
         self.transport = None
-        self.disconnected = asyncio.Event()
         self.buffer = bytearray()
+
+        self.disconnected = asyncio.Event()
         self.fatal = None
+
+        self.sim_started = asyncio.Event()
+        self.action_requested = asyncio.Event()
+        self.static = None
+        self.dynamic = None
 
     def connection_made(self, transport):
         self.transport = transport
         self.buffer.clear()
         self.disconnected.clear()
+        self.sim_started.clear()
+        self.action_requested.clear()
         LOGGER.info("%s: Connection made", self)
 
         self.send_message({
@@ -59,9 +67,21 @@ class AgentProtocol(asyncio.Protocol):
     def message_received(self, message):
         if message["type"] == "auth-response":
             self.handle_auth_response(message["content"])
+        elif message["type"] == "sim-start":
+            self.handle_sim_start(message["content"])
+        elif message["type"] == "request-action":
+            self.handle_request_action(message["content"])
         else:
             LOGGER.warning("%s: Unknown message type: %s", self, message["type"])
 
-    def handle_auth_response(self, response):
-        if response["result"] != "ok":
+    def handle_auth_response(self, content):
+        if content["result"] != "ok":
             self.fatal = AgentAuthFailed()
+
+    def handle_sim_start(self, content):
+        self.static = content
+        self.sim_started.set()
+
+    def handle_request_action(self, content):
+        self.dynamic = content
+        self.action_requested.set()
