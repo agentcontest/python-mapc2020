@@ -32,7 +32,7 @@ class AgentProtocol(asyncio.Protocol):
 
         self.sim_started = asyncio.Event()
         self.action_requested = asyncio.Event()
-        self.satus_updated = asyncio.Event()
+        self.status_updated = asyncio.Event()
         self.static = None
         self.dynamic = None
         self.status = None
@@ -109,3 +109,15 @@ class AgentProtocol(asyncio.Protocol):
     def handle_status_response(self, content):
         self.status = content
         self.status_updated.set()
+
+    async def send_action(self, tpe, params):
+        await self.sim_started.wait()
+        await self.action_requested.wait()
+        self.send_message({
+            "type": "action",
+            "content": {
+                "id": self.dynamic["id"],
+                "type": tpe,
+                "p": params,
+            }
+        })

@@ -9,6 +9,8 @@ async def main():
         lambda: mapc2020.AgentProtocol(user="agentA1", pw="1"),
         "127.0.0.1", 12300)
 
+    await protocol.send_action("move", ["n"])
+
     await protocol.disconnected.wait()
 
 asyncio.run(main())
