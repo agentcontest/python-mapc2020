@@ -13,8 +13,11 @@ LOGGER = logging.getLogger(__name__)
 class AgentException(RuntimeError):
     """Runtime error caused by misbehaving agent or simulation server."""
 
-class AgentAuthFailed(AgentException):
+class AuthFailed(AgentException):
     """Server rejected agent credentials."""
+
+class Bye(AgentException):
+    """Server shut down."""
 
 class AgentProtocol(asyncio.Protocol):
     def __init__(self, user: str, pw: str):
@@ -25,15 +28,17 @@ class AgentProtocol(asyncio.Protocol):
         self.buffer = bytearray()
 
         self.disconnected = asyncio.Event()
-        self.fatal = None
+        self.fatal: AgentException = None
 
         self.sim_started = asyncio.Event()
         self.action_requested = asyncio.Event()
         self.static = None
         self.dynamic = None
+        self.end = None
 
     def connection_made(self, transport):
         self.transport = transport
+        self.fatal = None
         self.buffer.clear()
         self.disconnected.clear()
         self.sim_started.clear()
@@ -69,19 +74,29 @@ class AgentProtocol(asyncio.Protocol):
             self.handle_auth_response(message["content"])
         elif message["type"] == "sim-start":
             self.handle_sim_start(message["content"])
+        elif message["type"] == "sim-end":
+            self.handle_sim_end(message["content"])
         elif message["type"] == "request-action":
             self.handle_request_action(message["content"])
+        elif message["type"] == "bye":
+            self.handle_bye(message["content"])
         else:
             LOGGER.warning("%s: Unknown message type: %s", self, message["type"])
 
     def handle_auth_response(self, content):
         if content["result"] != "ok":
-            self.fatal = AgentAuthFailed()
+            self.fatal = AuthFailed()
 
     def handle_sim_start(self, content):
         self.static = content
         self.sim_started.set()
 
+    def handle_sim_end(self, content):
+        self.end = content
+
     def handle_request_action(self, content):
         self.dynamic = content
         self.action_requested.set()
+
+    def handle_bye(self, _content):
+        self.fatal = Bye()
