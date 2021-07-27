@@ -10,9 +10,13 @@ import json
 import threading
 import xml.etree.ElementTree as ET
 
-from typing import Dict, Union, Generator, Type, Optional
+from types import TracebackType
+from typing import Dict, Union, Generator, Type, Optional, Tuple
 
 __version__ = "0.1.0"  # Remember to update setup.py
+
+DirectionLiteral = str
+RotationLiteral = str
 
 LOGGER = logging.getLogger(__name__)
 
@@ -329,74 +333,85 @@ class Agent:
             future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
         return future.result()
 
-    def skip(self):
+    def skip(self) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.skip(), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def move(self, direction):
+    def move(self, direction: DirectionLiteral) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.move(direction), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def attach(self, direction):
+    def attach(self, direction: DirectionLiteral) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.attach(direction), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def detach(self, direction):
+    def detach(self, direction: DirectionLiteral) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.detach(direction), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def rotate(self, rotation):
+    def rotate(self, rotation: RotationLiteral) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.rotate(rotation), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def connect(self, agent, pos):
+    def connect(self, agent: str, pos: Tuple[int, int]) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.connect(agent, pos), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def disconnect(self, pos1, pos2):
+    def disconnect(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.disconnect(pos1, pos2), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def request(self, direction):
+    def request(self, direction: DirectionLiteral) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.request(direction), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def submit(self, task):
+    def submit(self, task: str) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.submit(task), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def clear(self, pos):
+    def clear(self, pos: Tuple[int, int]) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.clear(pos), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def accept(self, task):
+    def accept(self, task: str) -> Agent:
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.accept(task), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
-        return future.result()
+        future.result()
+        return self
 
-    def _repr_svg_(self):
-        async def _get():
+    def _repr_svg_(self) -> str:
+        async def _get() -> str:
             return self.protocol._repr_svg_()
 
         with self._not_shut_down():
@@ -417,7 +432,7 @@ class Agent:
                 self.protocol.loop.call_soon_threadsafe(_shutdown)
 
     @classmethod
-    def connect(cls, user, pw, *, host: str = "127.0.0.1", port: int = 12300) -> Agent:
+    def create(cls, user: str, pw: str, *, host: str = "127.0.0.1", port: int = 12300) -> Agent:
         """
         Creates and initializes an agent connection.
         """
