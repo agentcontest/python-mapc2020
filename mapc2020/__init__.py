@@ -37,6 +37,7 @@ class AgentProtocol(asyncio.Protocol):
         self.action_requested = asyncio.Event()
         self.status_updated = asyncio.Event()
         self.static = None
+        self.state = None
         self.dynamic = None
         self.status = None
         self.end = None
@@ -103,7 +104,8 @@ class AgentProtocol(asyncio.Protocol):
         self.end = content
 
     def handle_request_action(self, content):
-        self.dynamic = content
+        self.state = content
+        self.dynamic = self.state["percept"]
         self.action_requested.set()
 
     def handle_bye(self, _content):
@@ -120,7 +122,7 @@ class AgentProtocol(asyncio.Protocol):
         self.send_message({
             "type": "action",
             "content": {
-                "id": self.dynamic["id"],
+                "id": self.state["id"],
                 "type": tpe,
                 "p": params,
             }
@@ -167,7 +169,26 @@ class AgentProtocol(asyncio.Protocol):
             "stroke-width": 0.2,
         }))
 
+        # Terrain.
+        for x, y in self.dynamic["terrain"]["obstacle"]:
+            ET.SubElement(svg, "rect", _attrs({
+                "x": x,
+                "y": y,
+                "width": 1,
+                "height": 1,
+                "fill": "#333",
+            }))
+
         return ET.tostring(svg).decode("utf-8")
+
+def draw_block(svg, x, y, *, color):
+    ET.SubElement(svg, "rect", _attrs({
+        "x": x,
+        "y": y,
+        "width": 1,
+        "height": 1,
+        "fill": color,
+    }))
 
 def _attrs(attrs: Dict[str, Union[str, int, float, None]]) -> Dict[str, str]:
     return {k: str(v) for k, v in attrs.items() if v is not None}
