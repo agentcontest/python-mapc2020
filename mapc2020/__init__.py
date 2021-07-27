@@ -133,12 +133,14 @@ class AgentProtocol(asyncio.Protocol):
     def _repr_svg_(self) -> str:
         vision = self.static["vision"]
 
-        svg = ET.Element("svg", {
+        svg = ET.Element("svg", _attrs({
             "xmlns": "http://www.w3.org/2000/svg",
             "version": "1.2",
             "baseProfile": "tiny",
             "viewBox": f"{-vision} {-vision} {2 * vision + 1} {2 * vision + 1}",
-        })
+            "width": vision * 40,
+            "height": vision * 40,
+        }))
 
         # Fog of war.
         for x in range(-vision, vision + 1):
