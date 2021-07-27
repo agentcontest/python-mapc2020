@@ -151,6 +151,25 @@ class AgentProtocol(asyncio.Protocol):
                         "opacity": "0.3",
                     }))
 
+        # Terrain.
+        for x, y in self.dynamic["terrain"].get("goal", []):
+            ET.SubElement(svg, "rect", _attrs({
+                "x": x,
+                "y": y,
+                "width": 1,
+                "height": 1,
+                "fill": "red",
+                "opacity": 0.4,
+            }))
+        for x, y in self.dynamic["terrain"].get("obstacle", []):
+            ET.SubElement(svg, "rect", _attrs({
+                "x": x,
+                "y": y,
+                "width": 1,
+                "height": 1,
+                "fill": "#333",
+            }))
+
         # Agent.
         ET.SubElement(svg, "line", _attrs({
             "x1": 0.5,
@@ -168,16 +187,6 @@ class AgentProtocol(asyncio.Protocol):
             "stroke": "black",
             "stroke-width": 0.2,
         }))
-
-        # Terrain.
-        for x, y in self.dynamic["terrain"]["obstacle"]:
-            ET.SubElement(svg, "rect", _attrs({
-                "x": x,
-                "y": y,
-                "width": 1,
-                "height": 1,
-                "fill": "#333",
-            }))
 
         return ET.tostring(svg).decode("utf-8")
 
