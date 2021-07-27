@@ -11,7 +11,7 @@ import threading
 import xml.etree.ElementTree as ET
 
 from types import TracebackType
-from typing import Dict, Union, Generator, Type, Optional, Tuple, TypeVar, Coroutine
+from typing import Dict, Union, Generator, Type, Optional, Tuple, TypeVar, Coroutine, Callable
 
 __version__ = "0.1.0"  # Remember to update setup.py
 
@@ -32,6 +32,9 @@ class AgentTerminatedError(AgentError):
 class AgentAuthError(AgentError):
     """Server rejected agent credentials."""
 
+class AgentActionError(AgentError):
+    """Agent action failed."""
+
 class Bye(AgentError):
     """Server shut down."""
 
@@ -46,7 +49,7 @@ class AgentProtocol(asyncio.Protocol):
         self.buffer = bytearray()
 
         self.disconnected = asyncio.Event()
-        self.fatal: AgentException = None
+        self.fatal: AgentError = None
 
         self.sim_started = asyncio.Event()
         self.action_requested = asyncio.Event()
