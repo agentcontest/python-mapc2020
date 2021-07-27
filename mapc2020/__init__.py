@@ -23,16 +23,16 @@ LOGGER = logging.getLogger(__name__)
 
 TIMEOUT = 15
 
-class AgentException(RuntimeError):
+class AgentError(RuntimeError):
     """Runtime error caused by misbehaving agent or simulation server."""
 
-class AgentTerminatedError(AgentException):
-    pass
+class AgentTerminatedError(AgentError):
+    """The engine connection was terminated unexpectedly."""
 
-class AuthFailed(AgentException):
+class AgentAuthError(AgentError):
     """Server rejected agent credentials."""
 
-class Bye(AgentException):
+class Bye(AgentError):
     """Server shut down."""
 
 class AgentProtocol(asyncio.Protocol):
@@ -327,6 +327,11 @@ class Agent:
 
     @property
     def dynamic(self):
+        """
+        Most recent percept.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#step-percept.
+        """
         async def _get():
             return self.protocol.dynamic
 
@@ -336,6 +341,11 @@ class Agent:
 
     @property
     def static(self):
+        """
+        Initial percept.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#initial-percept.
+        """
         async def _get():
             return self.protocol.static
 
@@ -344,6 +354,11 @@ class Agent:
         return future.result()
 
     def skip(self) -> Agent:
+        """
+        Skip this turn by doing nothing.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#skip.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.skip(), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -351,6 +366,11 @@ class Agent:
         return self
 
     def move(self, direction: DirectionLiteral) -> Agent:
+        """
+        Move in the specified direction.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#move.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.move(direction), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -358,6 +378,11 @@ class Agent:
         return self
 
     def attach(self, direction: DirectionLiteral) -> Agent:
+        """
+        Attach a thing to the agent.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#attach.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.attach(direction), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -365,6 +390,11 @@ class Agent:
         return self
 
     def detach(self, direction: DirectionLiteral) -> Agent:
+        """
+        Detach a thing from the agent.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#detach.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.detach(direction), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -372,6 +402,11 @@ class Agent:
         return self
 
     def rotate(self, rotation: RotationLiteral) -> Agent:
+        """
+        Rotate the agent.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#rotate.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.rotate(rotation), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -379,6 +414,11 @@ class Agent:
         return self
 
     def connect(self, agent: str, pos: Tuple[int, int]) -> Agent:
+        """
+        Connect things with a cooperating agent.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#connect.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.connect(agent, pos), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -386,6 +426,11 @@ class Agent:
         return self
 
     def disconnect(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> Agent:
+        """
+        Disconnect two attachments.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#disconnect.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.disconnect(pos1, pos2), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -393,6 +438,11 @@ class Agent:
         return self
 
     def request(self, direction: DirectionLiteral) -> Agent:
+        """
+        Request a new block from a dispenser.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#request.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.request(direction), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -400,6 +450,12 @@ class Agent:
         return self
 
     def submit(self, task: str) -> Agent:
+        """
+        Submit the pattern of things that are attached to the agent to complete
+        a task.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#submit.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.submit(task), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -407,6 +463,11 @@ class Agent:
         return self
 
     def clear(self, pos: Tuple[int, int]) -> Agent:
+        """
+        Prepare to clear an area.
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#clear.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.clear(pos), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
@@ -414,6 +475,11 @@ class Agent:
         return self
 
     def accept(self, task: str) -> Agent:
+        """
+        Accept a task.
+
+        https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#accept.
+        """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.accept(task), TIMEOUT)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
