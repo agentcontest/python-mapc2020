@@ -127,6 +127,8 @@ class AgentProtocol(asyncio.Protocol):
                 "p": params,
             }
         })
+        await self.action_requested.wait()
+        return self
 
     def _repr_svg_(self) -> str:
         vision = self.static["vision"]
@@ -170,25 +172,39 @@ class AgentProtocol(asyncio.Protocol):
                 "fill": "#333",
             }))
 
-        # Agent.
-        ET.SubElement(svg, "line", _attrs({
-            "x1": 0.5,
-            "y1": 0,
-            "x2": 0.5,
-            "y2": 1,
-            "stroke": "black",
-            "stroke-width": 0.2,
-        }))
-        ET.SubElement(svg, "line", _attrs({
-            "x1": 0,
-            "y1": 0.5,
-            "x2": 1,
-            "y2": 0.5,
-            "stroke": "black",
-            "stroke-width": 0.2,
-        }))
+        # Agent itself.
+        draw_entity(svg, 0, 0, "A")
+
+        # Things.
+        for thing in self.dynamic["things"]:
+            x = thing["x"]
+            y = thing["y"]
+            if thing["type"] == "entity":
+                draw_entity(svg, x, y, thing["details"])
+            elif thing["type"] == "taskboard":
+                draw_block(svg, x, y, color = "#00ffff")
+            elif thing["type"] == "dispenser":
+                draw_block(svg, x, y, color = "#41470b")
 
         return ET.tostring(svg).decode("utf-8")
+
+def draw_entity(svg, x, y, details):
+    ET.SubElement(svg, "line", _attrs({
+        "x1": x + 0.5,
+        "y1": y + 0,
+        "x2": x + 0.5,
+        "y2": y + 1,
+        "stroke": "black",
+        "stroke-width": 0.2,
+    }))
+    ET.SubElement(svg, "line", _attrs({
+        "x1": x + 0,
+        "y1": y + 0.5,
+        "x2": x + 1,
+        "y2": y + 0.5,
+        "stroke": "black",
+        "stroke-width": 0.2,
+    }))
 
 def draw_block(svg, x, y, *, color):
     ET.SubElement(svg, "rect", _attrs({
