@@ -10,7 +10,7 @@ import json
 import threading
 import xml.etree.ElementTree as ET
 
-from typing import Dict, Union
+from typing import Dict, Union, Generator
 
 __version__ = "0.1.0"  # Remember to update setup.py
 
@@ -290,6 +290,10 @@ def run_in_background(coroutine):
     return future.result()
 
 class Agent:
+    """
+    Synchronous wrapper around a transport and agent protocol pair.
+    """
+
     def __init__(self, transport: asyncio.Transport, protocol: AgentProtocol):
         self.transport = transport
         self.protocol = protocol
@@ -314,6 +318,23 @@ class Agent:
             future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
         return future.result()
 
+    @property
+    def static(self):
+        async def _get():
+            return self.protocol.static
+
+        with self._not_shut_down():
+            future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
+        return future.result()
+
+    def _repr_svg_(self):
+        async def _get():
+            return self.protocol._repr_svg_()
+
+        with self._not_shut_down():
+            future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
+        return future.result()
+
     def close(self) -> None:
         """
         Closes the transport and background event loop as soon as possible.
@@ -328,11 +349,12 @@ class Agent:
                 self.protocol.loop.call_soon_threadsafe(_shutdown)
 
     @classmethod
-    def connect(cls, user, pw, *, host: str = "127.0.0.1", port: int = 12300):
-        async def background(future: concurrent.futures.Future[Agent]) -> None:
-            transport, protocol = await asyncio.get_running_loop().create_connection(
-                    lambda: AgentProtocol(user, pw),
-                    host, port)
+    def connect(cls, user, pw, *, host: str = "127.0.0.1", port: int = 12300) -> Agent:
+        """
+        Creates and initializes an agent connection.
+        """
+        async def _main(future: concurrent.futures.Future[Agent]) -> None:
+            transport, protocol = await asyncio.get_running_loop().create_connection(lambda: AgentProtocol(user, pw), host, port)
             agent = cls(transport, protocol)
             try:
                 await protocol.initialize()
@@ -342,4 +364,4 @@ class Agent:
                 agent.close()
             await agent.shutdown_event.wait()
 
-        return run_in_background(background)
+        return run_in_background(_main)
