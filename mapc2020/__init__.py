@@ -10,11 +10,13 @@ import json
 import threading
 import xml.etree.ElementTree as ET
 
-from typing import Dict, Union, Generator
+from typing import Dict, Union, Generator, Type, Optional
 
 __version__ = "0.1.0"  # Remember to update setup.py
 
 LOGGER = logging.getLogger(__name__)
+
+TIMEOUT = 15
 
 class AgentException(RuntimeError):
     """Runtime error caused by misbehaving agent or simulation server."""
@@ -327,6 +329,72 @@ class Agent:
             future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
         return future.result()
 
+    def skip(self):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.skip(), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def move(self, direction):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.move(direction), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def attach(self, direction):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.attach(direction), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def detach(self, direction):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.detach(direction), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def rotate(self, rotation):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.rotate(rotation), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def connect(self, agent, pos):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.connect(agent, pos), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def disconnect(self, pos1, pos2):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.disconnect(pos1, pos2), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def request(self, direction):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.request(direction), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def submit(self, task):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.submit(task), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def clear(self, pos):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.clear(pos), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
+    def accept(self, task):
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.accept(task), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
     def _repr_svg_(self):
         async def _get():
             return self.protocol._repr_svg_()
@@ -357,7 +425,7 @@ class Agent:
             transport, protocol = await asyncio.get_running_loop().create_connection(lambda: AgentProtocol(user, pw), host, port)
             agent = cls(transport, protocol)
             try:
-                await protocol.initialize()
+                await asyncio.wait_for(protocol.initialize(), TIMEOUT)
                 future.set_result(agent)
                 await protocol.disconnected.wait()
             finally:
@@ -365,3 +433,9 @@ class Agent:
             await agent.shutdown_event.wait()
 
         return run_in_background(_main)
+
+    def __enter__(self) -> Agent:
+        return self
+
+    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_value: Optional[BaseException], traceback: Optional[TracebackType]) -> None:
+        self.close()
