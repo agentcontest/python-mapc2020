@@ -11,12 +11,13 @@ import threading
 import xml.etree.ElementTree as ET
 
 from types import TracebackType
-from typing import Dict, Union, Generator, Type, Optional, Tuple
+from typing import Dict, Union, Generator, Type, Optional, Tuple, TypeVar, Coroutine
 
 __version__ = "0.1.0"  # Remember to update setup.py
 
 DirectionLiteral = str
 RotationLiteral = str
+T = TypeVar("T")
 
 LOGGER = logging.getLogger(__name__)
 
@@ -280,7 +281,14 @@ def draw_block(svg, x, y, *, color):
 def _attrs(attrs: Dict[str, Union[str, int, float, None]]) -> Dict[str, str]:
     return {k: str(v) for k, v in attrs.items() if v is not None}
 
-def run_in_background(coroutine):
+def run_in_background(coroutine: Callable[[concurrent.futures.Future[T]], Coroutine[Any, Any, None]]) -> T:
+    """
+    Runs ``coroutine(future)`` in a new event loop on a background thread.
+
+    Blocks on *future* and returns the result as soon as it is resolved.
+    The coroutine and all remaining tasks continue running in the background
+    until complete.
+    """
     assert asyncio.iscoroutinefunction(coroutine)
 
     future = concurrent.futures.Future()
@@ -298,6 +306,8 @@ def run_in_background(coroutine):
 class Agent:
     """
     Synchronous wrapper around a transport and agent protocol pair.
+
+    Automatically closes the transport when used as a context manager.
     """
 
     def __init__(self, transport: asyncio.Transport, protocol: AgentProtocol):
@@ -432,9 +442,9 @@ class Agent:
                 self.protocol.loop.call_soon_threadsafe(_shutdown)
 
     @classmethod
-    def create(cls, user: str, pw: str, *, host: str = "127.0.0.1", port: int = 12300) -> Agent:
+    def open(cls, user: str, pw: str, *, host: str = "127.0.0.1", port: int = 12300) -> Agent:
         """
-        Creates and initializes an agent connection.
+        Opens and initializes an agent connection.
         """
         async def _main(future: concurrent.futures.Future[Agent]) -> None:
             transport, protocol = await asyncio.get_running_loop().create_connection(lambda: AgentProtocol(user, pw), host, port)
