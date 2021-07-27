@@ -5,6 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import json
+import xml.etree.ElementTree as ET
+
+from typing import Dict, Union
 
 __version__ = "0.1.0"  # Remember to update setup.py
 
@@ -93,7 +96,7 @@ class AgentProtocol(asyncio.Protocol):
             self.fatal = AuthFailed()
 
     def handle_sim_start(self, content):
-        self.static = content
+        self.static = content["percept"]
         self.sim_started.set()
 
     def handle_sim_end(self, content):
@@ -113,6 +116,7 @@ class AgentProtocol(asyncio.Protocol):
     async def send_action(self, tpe, params):
         await self.sim_started.wait()
         await self.action_requested.wait()
+        self.action_requested.clear()
         self.send_message({
             "type": "action",
             "content": {
@@ -121,3 +125,49 @@ class AgentProtocol(asyncio.Protocol):
                 "p": params,
             }
         })
+
+    def _repr_svg_(self) -> str:
+        vision = self.static["vision"]
+
+        svg = ET.Element("svg", {
+            "xmlns": "http://www.w3.org/2000/svg",
+            "version": "1.2",
+            "baseProfile": "tiny",
+            "viewBox": f"{-vision} {-vision} {2 * vision + 1} {2 * vision + 1}",
+        })
+
+        # Fog of war.
+        for x in range(-vision, vision + 1):
+            for y in range(-vision, vision + 1):
+                if abs(x) + abs(y) > vision:
+                    ET.SubElement(svg, "rect", _attrs({
+                        "x": x,
+                        "y": y,
+                        "width": 1,
+                        "height": 1,
+                        "fill": "black",
+                        "opacity": "0.3",
+                    }))
+
+        # Agent.
+        ET.SubElement(svg, "line", _attrs({
+            "x1": 0.5,
+            "y1": 0,
+            "x2": 0.5,
+            "y2": 1,
+            "stroke": "black",
+            "stroke-width": 0.2,
+        }))
+        ET.SubElement(svg, "line", _attrs({
+            "x1": 0,
+            "y1": 0.5,
+            "x2": 1,
+            "y2": 0.5,
+            "stroke": "black",
+            "stroke-width": 0.2,
+        }))
+
+        return ET.tostring(svg).decode("utf-8")
+
+def _attrs(attrs: Dict[str, Union[str, int, float, None]]) -> Dict[str, str]:
+    return {k: str(v) for k, v in attrs.items() if v is not None}
