@@ -25,6 +25,8 @@ Todo
 * [ ] More robust error handling
 * [ ] Handle action results
 * [ ] Add example
+* [ ] Seamless reconnects
+* [ ] Seamless simulation change
 * [ ] Finish typing
 * [ ] Provide more documentation
 * [ ] Testing
