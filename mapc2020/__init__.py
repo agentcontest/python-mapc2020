@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import concurrent.futures
 import logging
 import json
+import threading
 import xml.etree.ElementTree as ET
 
 from typing import Dict, Union
@@ -16,6 +19,9 @@ LOGGER = logging.getLogger(__name__)
 class AgentException(RuntimeError):
     """Runtime error caused by misbehaving agent or simulation server."""
 
+class AgentTerminatedError(AgentException):
+    pass
+
 class AuthFailed(AgentException):
     """Server rejected agent credentials."""
 
@@ -24,6 +30,8 @@ class Bye(AgentException):
 
 class AgentProtocol(asyncio.Protocol):
     def __init__(self, user: str, pw: str):
+        self.loop = asyncio.get_running_loop()
+
         self.user = user
         self.pw = pw
 
@@ -114,6 +122,10 @@ class AgentProtocol(asyncio.Protocol):
     def handle_status_response(self, content):
         self.status = content
         self.status_updated.set()
+
+    async def initialize(self):
+        await self.sim_started.wait()
+        await self.action_requested.wait()
 
     async def send_action(self, tpe, params):
         await self.sim_started.wait()
@@ -261,3 +273,73 @@ def draw_block(svg, x, y, *, color):
 
 def _attrs(attrs: Dict[str, Union[str, int, float, None]]) -> Dict[str, str]:
     return {k: str(v) for k, v in attrs.items() if v is not None}
+
+def run_in_background(coroutine):
+    assert asyncio.iscoroutinefunction(coroutine)
+
+    future = concurrent.futures.Future()
+
+    def background() -> None:
+        try:
+            asyncio.run(coroutine(future))
+            future.cancel()
+        except Exception as exc:
+            future.set_exception(exc)
+
+    threading.Thread(target=background).start()
+    return future.result()
+
+class Agent:
+    def __init__(self, transport: asyncio.Transport, protocol: AgentProtocol):
+        self.transport = transport
+        self.protocol = protocol
+
+        self._shutdown_lock = threading.Lock()
+        self._shutdown = False
+        self.shutdown_event = asyncio.Event()
+
+    @contextlib.contextmanager
+    def _not_shut_down(self) -> Generator[None, None, None]:
+        with self._shutdown_lock:
+            if self._shutdown:
+                raise AgentTerminatedError("agent event loop dead")
+            yield
+
+    @property
+    def dynamic(self):
+        async def _get():
+            return self.protocol.dynamic
+
+        with self._not_shut_down():
+            future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
+        return future.result()
+
+    def close(self) -> None:
+        """
+        Closes the transport and background event loop as soon as possible.
+        """
+        def _shutdown() -> None:
+            self.transport.close()
+            self.shutdown_event.set()
+
+        with self._shutdown_lock:
+            if not self._shutdown:
+                self._shutdown = True
+                self.protocol.loop.call_soon_threadsafe(_shutdown)
+
+    @classmethod
+    def connect(cls, user, pw, *, host: str = "127.0.0.1", port: int = 12300):
+        async def background(future: concurrent.futures.Future[Agent]) -> None:
+            transport, protocol = await asyncio.get_running_loop().create_connection(
+                    lambda: AgentProtocol(user, pw),
+                    host, port)
+            agent = cls(transport, protocol)
+            try:
+                await protocol.initialize()
+                future.set_result(agent)
+                await protocol.disconnected.wait()
+            finally:
+                agent.close()
+            await agent.shutdown_event.wait()
+
+        return run_in_background(background)
