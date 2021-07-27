@@ -130,6 +130,48 @@ class AgentProtocol(asyncio.Protocol):
         await self.action_requested.wait()
         return self
 
+    async def skip(self):
+        return await self.send_action("skip")
+
+    async def move(self, direction):
+        assert direction in ["n", "s", "e", "w"]
+        return await self.send_action("move", [direction])
+
+    async def attach(self, direction):
+        assert direction in ["n", "s", "e", "w"]
+        return await self.send_action("attach", [direction])
+
+    async def detach(self, direction):
+        assert direction in ["n", "s", "e", "w"]
+        return await self.send_action("detach", [direction])
+
+    async def rotate(self, rotation):
+        assert rotation in ["cw", "ccw"]
+        return await self.send_action("rotate", [rotation])
+
+    async def connect(self, agent, pos):
+        x, y = pos
+        return await self.send_action("connect", [agent, x, y])
+
+    async def disconnect(self, pos1, pos2):
+        x1, y1 = pos1
+        x2, y2 = pos2
+        return await self.send_action("disconnect", [x1, y1, x2, y2])
+
+    async def request(self, direction):
+        assert direction in ["n", "s", "e", "w"]
+        return await self.send_action("request", [direction])
+
+    async def submit(self, task):
+        return await self.send_action("submit", [task])
+
+    async def clear(self, pos):
+        x, y = pos
+        return await self.send_action("clear", [x, y])
+
+    async def accept(self, task):
+        return await self.send_action("accept", [task])
+
     def _repr_svg_(self) -> str:
         vision = self.static["vision"]
 
