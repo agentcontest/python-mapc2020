@@ -356,11 +356,27 @@ class Agent:
             future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
         return future.result()
 
+    def send_message(self, msg: Any) -> None:
+        """
+        Low-level method to send an arbitrary message.
+
+        >>> agent.send_message({
+        ...     "hello": "world",
+        >>> })
+        """
+        with self._not_shut_down():
+            coro = asyncio.wait_for(self.protocol.send_message(msg), TIMEOUT)
+            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+        return future.result()
+
     def skip(self) -> Agent:
         """
         Skip this turn by doing nothing.
 
-        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#skip.
+        >>> agent.skip()
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#skip
+        for details.
         """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.skip(), TIMEOUT)
@@ -372,7 +388,10 @@ class Agent:
         """
         Move in the specified direction.
 
-        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#move.
+        >>> agent.move("n")
+
+        See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#move
+        for details.
         """
         with self._not_shut_down():
             coro = asyncio.wait_for(self.protocol.move(direction), TIMEOUT)
