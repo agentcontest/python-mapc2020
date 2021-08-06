@@ -11,7 +11,7 @@ import threading
 import xml.etree.ElementTree as ET
 
 from types import TracebackType
-from typing import Dict, Union, Generator, Type, Optional, Tuple, TypeVar, Coroutine, Callable
+from typing import Any, Dict, List, Union, Generator, Type, Optional, Tuple, TypeVar, Coroutine, Callable
 
 __version__ = "0.1.0"  # Remember to update setup.py
 
@@ -45,22 +45,22 @@ class AgentProtocol(asyncio.Protocol):
         self.user = user
         self.pw = pw
 
-        self.transport = None
+        self.transport: Optional[asyncio.BaseTransport] = None
         self.buffer = bytearray()
 
         self.disconnected = asyncio.Event()
-        self.fatal: AgentError = None
+        self.fatal: Optional[AgentError] = None
 
         self.sim_started = asyncio.Event()
         self.action_requested = asyncio.Event()
         self.status_updated = asyncio.Event()
-        self.static = None
+        self.static: Optional[Any] = None
         self.state = None
-        self.dynamic = None
+        self.dynamic: Optional[Any] = None
         self.status = None
         self.end = None
 
-    def connection_made(self, transport):
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = transport
         self.fatal = None
         self.buffer.clear()
@@ -78,7 +78,7 @@ class AgentProtocol(asyncio.Protocol):
             },
         })
 
-    def send_message(self, message):
+    def send_message(self, message: Any) -> None:
         LOGGER.debug("%s: << %s", self, message)
         self.transport.write(json.dumps(message).encode("utf-8") + b"\0")
 
@@ -94,7 +94,7 @@ class AgentProtocol(asyncio.Protocol):
             LOGGER.debug("%s: >> %s", self, message)
             self.message_received(message)
 
-    def message_received(self, message):
+    def message_received(self, message: Any) -> None:
         if message["type"] == "auth-response":
             self.handle_auth_response(message["content"])
         elif message["type"] == "sim-start":
@@ -110,11 +110,11 @@ class AgentProtocol(asyncio.Protocol):
         else:
             LOGGER.warning("%s: Unknown message type: %s", self, message["type"])
 
-    def handle_auth_response(self, content):
+    def handle_auth_response(self, content: Any) -> None:
         if content["result"] != "ok":
-            self.fatal = AuthFailed()
+            self.fatal = AgentAuthError()
 
-    def handle_sim_start(self, content):
+    def handle_sim_start(self, content: Any) -> None:
         self.static = content["percept"]
         self.sim_started.set()
 
@@ -137,7 +137,7 @@ class AgentProtocol(asyncio.Protocol):
         await self.sim_started.wait()
         await self.action_requested.wait()
 
-    async def send_action(self, tpe, params):
+    async def send_action(self, tpe: str, params: List[Any]) -> AgentProtocol:
         await self.sim_started.wait()
         await self.action_requested.wait()
         self.action_requested.clear()
@@ -152,8 +152,8 @@ class AgentProtocol(asyncio.Protocol):
         await self.action_requested.wait()
         return self
 
-    async def skip(self):
-        return await self.send_action("skip")
+    async def skip(self) -> AgentProtocol:
+        return await self.send_action("skip", [])
 
     async def move(self, direction):
         assert direction in ["n", "s", "e", "w"]
@@ -294,7 +294,7 @@ def run_in_background(coroutine: Callable[[concurrent.futures.Future[T]], Corout
     """
     assert asyncio.iscoroutinefunction(coroutine)
 
-    future = concurrent.futures.Future()
+    future: concurrent.futures.Future[T] = concurrent.futures.Future()
 
     def background() -> None:
         try:
@@ -313,7 +313,7 @@ class Agent:
     Automatically closes the transport when used as a context manager.
     """
 
-    def __init__(self, transport: asyncio.Transport, protocol: AgentProtocol):
+    def __init__(self, transport: asyncio.BaseTransport, protocol: AgentProtocol):
         self.transport = transport
         self.protocol = protocol
 
