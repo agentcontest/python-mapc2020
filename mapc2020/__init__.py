@@ -151,7 +151,7 @@ class AgentProtocol(asyncio.Protocol):
             })
             await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
 
-            if self.state["percept"]["lastAction"] != tpe:
+            if self.state["percept"]["lastAction"] == "no_action":
                 self.action_requested.clear()
                 self.send_message({
                     "type": "action",
