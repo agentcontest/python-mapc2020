@@ -46,8 +46,8 @@ class ColorMap:
 
     def select(self, key: str) -> str:
         if key not in self.assigned:
-            self.next += 1
             self.assigned[key] = self.colors[self.next % len(self.colors)]
+            self.next += 1
         return self.assigned[key]
 
 TEAM_COLORS = ColorMap([
