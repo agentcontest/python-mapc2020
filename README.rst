@@ -25,5 +25,5 @@ Stretch goals
 -------------
 * [ ] Seamless reconnects
 * [ ] Seamless simulation change
-* [ ] Finish typing
+* [ ] In-depth typing
 * [ ] Provide more documentation

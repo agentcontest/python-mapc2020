@@ -687,7 +687,7 @@ class Agent:
         self.close()
 
 
-def hint1():
+def hint1() -> str:
     """
     Lorem ipsum
     """
