@@ -304,12 +304,49 @@ def draw_entity(svg, x, y, color):
     }))
 
 def draw_block(svg, x, y, *, color):
+    # Block.
     ET.SubElement(svg, "rect", _attrs({
         "x": x,
         "y": y,
         "width": 1,
         "height": 1,
         "fill": color,
+    }))
+
+    # Reflection.
+    ET.SubElement(svg, "line", _attrs({
+        "x1": x,
+        "y1": y,
+        "x2": x,
+        "y2": y + 1,
+        "stroke": "white",
+        "stroke-width": "0.1",
+    }))
+    ET.SubElement(svg, "line", _attrs({
+        "x1": x,
+        "y1": y,
+        "x2": x + 1,
+        "y2": y,
+        "stroke": "white",
+        "stroke-width": "0.1",
+    }))
+
+    # Shadow.
+    ET.SubElement(svg, "line", _attrs({
+        "x1": x + 1,
+        "y1": y,
+        "x2": x + 1,
+        "y2": y + 1,
+        "stroke": "black",
+        "stroke-width": "0.1",
+    }))
+    ET.SubElement(svg, "line", _attrs({
+        "x1": x,
+        "y1": y + 1,
+        "x2": x + 1,
+        "y2": y + 1,
+        "stroke": "black",
+        "stroke-width": "0.1",
     }))
 
 def _attrs(attrs: Dict[str, Union[str, int, float, None]]) -> Dict[str, str]:
