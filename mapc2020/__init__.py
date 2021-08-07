@@ -318,7 +318,10 @@ class AgentProtocol(asyncio.Protocol):
                 draw_flat(svg, x, y, color = "#00ffff")
             elif thing["type"] == "dispenser":
                 draw_flat(svg, x, y, color = BLOCK_COLORS.select(thing["details"]))
-            elif thing["type"] == "block":
+
+        # Draw blocks last.
+        for thing in dynamic["things"]:
+            if thing["type"] == "block":
                 draw_block(svg, x, y, color = BLOCK_COLORS.select(thing["details"]))
 
         return ET.tostring(svg).decode("utf-8")
