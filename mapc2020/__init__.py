@@ -139,7 +139,7 @@ class AgentProtocol(asyncio.Protocol):
 
     async def send_action(self, tpe: str, params: List[Any]) -> AgentProtocol:
         await self.sim_started.wait()
-        await self.action_requested.wait()
+        await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
         self.action_requested.clear()
         self.send_message({
             "type": "action",
@@ -149,7 +149,7 @@ class AgentProtocol(asyncio.Protocol):
                 "p": params,
             }
         })
-        await self.action_requested.wait()
+        await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
         return self
 
     async def skip(self) -> AgentProtocol:
@@ -365,7 +365,7 @@ class Agent:
         >>> })
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.send_message(msg), TIMEOUT)
+            coro = self.protocol.send_message(msg)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         return future.result()
 
@@ -379,7 +379,7 @@ class Agent:
         for details.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.skip(), TIMEOUT)
+            coro = self.protocol.skip()
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -394,7 +394,7 @@ class Agent:
         for details.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.move(direction), TIMEOUT)
+            coro = self.protocol.move(direction)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -406,7 +406,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#attach.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.attach(direction), TIMEOUT)
+            coro = self.protocol.attach(direction)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -418,7 +418,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#detach.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.detach(direction), TIMEOUT)
+            coro = self.protocol.detach(direction)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -432,7 +432,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#rotate.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.rotate(rotation), TIMEOUT)
+            coro = self.protocol.rotate(rotation)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -444,7 +444,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#connect.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.connect(agent, pos), TIMEOUT)
+            coro = self.protocol.connect(agent, pos)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -456,7 +456,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#disconnect.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.disconnect(pos1, pos2), TIMEOUT)
+            coro = self.protocol.disconnect(pos1, pos2)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -468,7 +468,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#request.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.request(direction), TIMEOUT)
+            coro = self.protocol.request(direction)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -481,7 +481,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#submit.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.submit(task), TIMEOUT)
+            coro = self.protocol.submit(task)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -493,7 +493,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#clear.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.clear(pos), TIMEOUT)
+            coro = self.protocol.clear(pos)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -505,7 +505,7 @@ class Agent:
         https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#accept.
         """
         with self._not_shut_down():
-            coro = asyncio.wait_for(self.protocol.accept(task), TIMEOUT)
+            coro = self.protocol.accept(task)
             future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
         future.result()
         return self
@@ -537,10 +537,12 @@ class Agent:
         Opens and initializes an agent connection.
         """
         async def _main(future: concurrent.futures.Future[Agent]) -> None:
-            transport, protocol = await asyncio.get_running_loop().create_connection(lambda: AgentProtocol(user, pw), host, port)
+            transport, protocol = await asyncio.wait_for(
+                asyncio.get_running_loop().create_connection(lambda: AgentProtocol(user, pw), host, port),
+                TIMEOUT)
             agent = cls(transport, protocol)
             try:
-                await asyncio.wait_for(protocol.initialize(), TIMEOUT)
+                await protocol.initialize()
                 future.set_result(agent)
                 await protocol.disconnected.wait()
             finally:
