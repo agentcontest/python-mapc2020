@@ -35,9 +35,6 @@ class AgentAuthError(AgentError):
 class AgentActionError(AgentError):
     """Agent action failed."""
 
-class Bye(AgentError):
-    """Server shut down."""
-
 class AgentProtocol(asyncio.Protocol):
     def __init__(self, user: str, pw: str):
         self.loop = asyncio.get_running_loop()
@@ -48,8 +45,7 @@ class AgentProtocol(asyncio.Protocol):
         self.transport: Optional[asyncio.BaseTransport] = None
         self.buffer = bytearray()
 
-        self.fatal: Optional[AgentError] = None
-
+        self.disconnected = asyncio.Event()
         self.action_requested = asyncio.Event()
         self.state = None
         self.dynamic: Optional[Any] = None
@@ -59,11 +55,10 @@ class AgentProtocol(asyncio.Protocol):
         self.transport = transport
         self.buffer.clear()
 
-        self.fatal = None
-
         self.static: asyncio.Future[Any] = asyncio.Future()
-        self.disconnected: asyncio.Future[None] = asyncio.Future()
+        self.finished: asyncio.Future[None] = asyncio.Future()
 
+        self.disconnected.clear()
         self.action_requested.clear()
         LOGGER.info("%s: Connection made", self)
 
@@ -81,10 +76,12 @@ class AgentProtocol(asyncio.Protocol):
 
     def connection_lost(self, exc):
         LOGGER.info("%s: Connection lost (error: %s)", self, exc)
-        if exc is None:
-            self.disconnected.set_result(None)
-        else:
-            self.disconnected.set_exception(exc)
+        exc = exc or AgentTerminatedError()
+        if not self.static.done():
+            self.static.set_exception(exc)
+        if not self.finished.done():
+            self.finished.set_exception(exc)
+        self.disconnected.set()
 
     def data_received(self, data):
         self.buffer.extend(data)
@@ -110,7 +107,9 @@ class AgentProtocol(asyncio.Protocol):
 
     def handle_auth_response(self, content: Any) -> None:
         if content["result"] != "ok":
-            self.fatal = AgentAuthError()
+            exc = AgentAuthError()
+            self.static.set_exception(exc)
+            self.finished.set_exception(exc)
 
     def handle_sim_start(self, content: Any) -> None:
         self.static.set_result(content["percept"])
@@ -124,7 +123,7 @@ class AgentProtocol(asyncio.Protocol):
         self.action_requested.set()
 
     def handle_bye(self, _content):
-        self.fatal = Bye()
+        self.finished.set_result(None)
 
     async def initialize(self):
         await self.static
@@ -542,7 +541,7 @@ class Agent:
             try:
                 await protocol.initialize()
                 future.set_result(agent)
-                await protocol.disconnected
+                await protocol.disconnected.wait()
             finally:
                 agent.close()
             await agent.shutdown_event.wait()
