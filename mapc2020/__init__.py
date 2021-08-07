@@ -364,9 +364,11 @@ class Agent:
         ...     "hello": "world",
         >>> })
         """
+        async def _send():
+            self.protocol.send_message(msg)
+
         with self._not_shut_down():
-            coro = self.protocol.send_message(msg)
-            future = asyncio.run_coroutine_threadsafe(coro, self.protocol.loop)
+            future = asyncio.run_coroutine_threadsafe(_send(), self.protocol.loop)
         return future.result()
 
     def skip(self) -> Agent:
