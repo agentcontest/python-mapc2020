@@ -51,10 +51,8 @@ class AgentProtocol(asyncio.Protocol):
         self.disconnected = asyncio.Event()
         self.fatal: Optional[AgentError] = None
 
-        self.sim_started = asyncio.Event()
         self.action_requested = asyncio.Event()
         self.status_updated = asyncio.Event()
-        self.static: Optional[Any] = None
         self.state = None
         self.dynamic: Optional[Any] = None
         self.status = None
@@ -62,10 +60,13 @@ class AgentProtocol(asyncio.Protocol):
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = transport
-        self.fatal = None
         self.buffer.clear()
+
+        self.fatal = None
+
+        self.static: asyncio.Future[Any] = asyncio.Future()
+
         self.disconnected.clear()
-        self.sim_started.clear()
         self.action_requested.clear()
         self.status_updated.clear()
         LOGGER.info("%s: Connection made", self)
@@ -115,8 +116,7 @@ class AgentProtocol(asyncio.Protocol):
             self.fatal = AgentAuthError()
 
     def handle_sim_start(self, content: Any) -> None:
-        self.static = content["percept"]
-        self.sim_started.set()
+        self.static.set_result(content["percept"])
 
     def handle_sim_end(self, content):
         self.end = content
@@ -134,11 +134,11 @@ class AgentProtocol(asyncio.Protocol):
         self.status_updated.set()
 
     async def initialize(self):
-        await self.sim_started.wait()
+        await self.static
         await self.action_requested.wait()
 
     async def send_action(self, tpe: str, params: List[Any]) -> AgentProtocol:
-        await self.sim_started.wait()
+        await self.static
         await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
         self.action_requested.clear()
         self.send_message({
@@ -195,7 +195,7 @@ class AgentProtocol(asyncio.Protocol):
         return await self.send_action("accept", [task])
 
     def _repr_svg_(self) -> str:
-        vision = self.static["vision"]
+        vision = self.static.result()["vision"]
 
         svg = ET.Element("svg", _attrs({
             "xmlns": "http://www.w3.org/2000/svg",
@@ -350,7 +350,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#initial-percept.
         """
         async def _get():
-            return self.protocol.static
+            return await self.protocol.static
 
         with self._not_shut_down():
             future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
