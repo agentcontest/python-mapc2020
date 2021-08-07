@@ -16,6 +16,7 @@ Example
 
 .. code:: python
 
+    >>> import mapc2020
     >>> agent = mapc2020.Agent.open("agentA1", "1")
 
     >>> agent.move("n")
