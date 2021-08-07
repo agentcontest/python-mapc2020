@@ -512,6 +512,8 @@ class Agent:
         """
         Prepare to clear an area.
 
+        >>> agent.clear((1,2))
+
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#clear.
         """
         with self._not_shut_down():
