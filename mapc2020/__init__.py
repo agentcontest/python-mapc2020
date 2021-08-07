@@ -427,6 +427,8 @@ class Agent:
         """
         Rotate the agent.
 
+        >>> agent.rotate("cw")
+
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#rotate.
         """
         with self._not_shut_down():
