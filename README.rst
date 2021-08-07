@@ -1,8 +1,15 @@
-mapc2020
-========
+python-mapc2020
+===============
 
 An experimental Python client for the 2020/21 edition of the Multi-Agent
 Programming Contest.
+
+Install
+-------
+
+.. code::
+
+    pip install git+https://github.com/agentcontest/python-mapc2020
 
 Example
 -------
