@@ -215,6 +215,7 @@ class AgentProtocol(asyncio.Protocol):
 
     def _repr_svg_(self) -> str:
         vision = self.static.result()["vision"]
+        dynamic = self.dynamic.result()
 
         svg = ET.Element("svg", _attrs({
             "xmlns": "http://www.w3.org/2000/svg",
@@ -239,7 +240,7 @@ class AgentProtocol(asyncio.Protocol):
                     }))
 
         # Terrain.
-        for x, y in self.dynamic["terrain"].get("goal", []):
+        for x, y in dynamic["terrain"].get("goal", []):
             ET.SubElement(svg, "rect", _attrs({
                 "x": x,
                 "y": y,
@@ -248,7 +249,7 @@ class AgentProtocol(asyncio.Protocol):
                 "fill": "red",
                 "opacity": 0.4,
             }))
-        for x, y in self.dynamic["terrain"].get("obstacle", []):
+        for x, y in dynamic["terrain"].get("obstacle", []):
             ET.SubElement(svg, "rect", _attrs({
                 "x": x,
                 "y": y,
@@ -261,7 +262,7 @@ class AgentProtocol(asyncio.Protocol):
         draw_entity(svg, 0, 0, "A")
 
         # Things.
-        for thing in self.dynamic["things"]:
+        for thing in dynamic["things"]:
             x = thing["x"]
             y = thing["y"]
             if thing["type"] == "entity":
