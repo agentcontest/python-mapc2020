@@ -19,8 +19,6 @@ Example
 Todo
 ----
 
-* [ ] Properly draw dispensers
-* [ ] Properly draw blocks of different types
 * [ ] Testing
 
 Stretch goals

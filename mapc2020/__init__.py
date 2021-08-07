@@ -311,6 +311,8 @@ class AgentProtocol(asyncio.Protocol):
             elif thing["type"] == "taskboard":
                 draw_block(svg, x, y, color = "#00ffff")
             elif thing["type"] == "dispenser":
+                draw_dispenser(svg, x, y, color = BLOCK_COLORS.select(thing["details"]))
+            elif thing["type"] == "block":
                 draw_block(svg, x, y, color = BLOCK_COLORS.select(thing["details"]))
 
         return ET.tostring(svg).decode("utf-8")
@@ -336,6 +338,15 @@ def draw_entity(svg, x, y, color):
         "cx": x + 0.5,
         "cy": y + 0.5,
         "r": 0.3,
+        "fill": color,
+    }))
+
+def draw_dispenser(svg, x, y, *, color):
+    ET.SubElement(svg, "rect", _attrs({
+        "x": x,
+        "y": y,
+        "width": 1,
+        "height": 1,
         "fill": color,
     }))
 
