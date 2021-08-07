@@ -37,12 +37,12 @@ class AgentActionError(AgentError):
     """Agent action failed."""
 
 class ColorMap:
-    def __init__(self, colors):
+    def __init__(self, colors: List[str]):
         self.colors = colors
-        self.assigned = {}
+        self.assigned: Dict[str, str] = {}
         self.next = 0
 
-    def select(self, key):
+    def select(self, key: str) -> str:
         if key not in self.assigned:
             self.next += 1
             self.assigned[key] = self.colors[self.next % len(self.colors)]
@@ -118,7 +118,7 @@ class AgentProtocol(asyncio.Protocol):
         assert self.transport is not None, "send_message before connection made"
         self.transport.write(json.dumps(message).encode("utf-8") + b"\0")
 
-    def connection_lost(self, exc):
+    def connection_lost(self, exc: Optional[Exception]) -> None:
         LOGGER.info("%s: Connection lost (error: %s)", self, exc)
         exc = exc or AgentTerminatedError()
         if not self.static.done():
@@ -127,7 +127,7 @@ class AgentProtocol(asyncio.Protocol):
             self.finished.set_exception(exc)
         self.disconnected.set()
 
-    def data_received(self, data):
+    def data_received(self, data: bytes) -> None:
         self.buffer.extend(data)
         while b"\0" in self.buffer:
             message_bytes, self.buffer = self.buffer.split(b"\0", 1)
@@ -158,10 +158,10 @@ class AgentProtocol(asyncio.Protocol):
     def handle_sim_start(self, content: Any) -> None:
         self.static.set_result(content["percept"])
 
-    def handle_sim_end(self, content):
+    def handle_sim_end(self, content: Any) -> None:
         self.finished.set_result(content)
 
-    def handle_request_action(self, content):
+    def handle_request_action(self, content: Any) -> None:
         if self.dynamic.done():
             self.dynamic = asyncio.Future()
         self.dynamic.set_result(content["percept"])
@@ -169,17 +169,19 @@ class AgentProtocol(asyncio.Protocol):
         self.state = content
         self.action_requested.set()
 
-    def handle_bye(self, _content):
+    def handle_bye(self, _content: Any) -> None:
         if not self.finished.done():
             self.finished.set_result(None)
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         await self.static
         await self.dynamic
 
     async def send_action(self, tpe: str, params: List[Any]) -> AgentProtocol:
         async with self.action_lock:
             await self.static
+            assert self.state, "state should be set with static"
+
             await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
 
             self.action_requested.clear()
@@ -216,46 +218,46 @@ class AgentProtocol(asyncio.Protocol):
     async def skip(self) -> AgentProtocol:
         return await self.send_action("skip", [])
 
-    async def move(self, direction):
+    async def move(self, direction: DirectionLiteral) -> AgentProtocol:
         assert direction in ["n", "s", "e", "w"]
         return await self.send_action("move", [direction])
 
-    async def attach(self, direction):
+    async def attach(self, direction: DirectionLiteral) -> AgentProtocol:
         assert direction in ["n", "s", "e", "w"]
         return await self.send_action("attach", [direction])
 
-    async def detach(self, direction):
+    async def detach(self, direction: DirectionLiteral) -> AgentProtocol:
         assert direction in ["n", "s", "e", "w"]
         return await self.send_action("detach", [direction])
 
-    async def rotate(self, rotation):
+    async def rotate(self, rotation: RotationLiteral) -> AgentProtocol:
         assert rotation in ["cw", "ccw"]
         return await self.send_action("rotate", [rotation])
 
-    async def connect(self, agent, pos):
+    async def connect(self, agent: str, pos: Tuple[int, int]) -> AgentProtocol:
         x, y = pos
         return await self.send_action("connect", [agent, x, y])
 
-    async def disconnect(self, pos1, pos2):
+    async def disconnect(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> AgentProtocol:
         x1, y1 = pos1
         x2, y2 = pos2
         return await self.send_action("disconnect", [x1, y1, x2, y2])
 
-    async def request(self, direction):
+    async def request(self, direction: DirectionLiteral) -> AgentProtocol:
         assert direction in ["n", "s", "e", "w"]
         return await self.send_action("request", [direction])
 
-    async def submit(self, task):
+    async def submit(self, task: str) -> AgentProtocol:
         return await self.send_action("submit", [task])
 
-    async def clear(self, pos):
+    async def clear(self, pos: Tuple[int, int]) -> AgentProtocol:
         x, y = pos
         return await self.send_action("clear", [x, y])
 
-    async def accept(self, task):
+    async def accept(self, task: str) -> AgentProtocol:
         return await self.send_action("accept", [task])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AgentProtocol at {id(self):#x} (user={self.user!r})>"
 
     def _repr_svg_(self) -> str:
@@ -320,7 +322,7 @@ class AgentProtocol(asyncio.Protocol):
 
         return ET.tostring(svg).decode("utf-8")
 
-def draw_entity(svg, x, y, color):
+def draw_entity(svg: ET.Element, x: int, y: int, *, color: str) -> None:
     ET.SubElement(svg, "line", _attrs({
         "x1": x + 0.5,
         "y1": y + 0,
@@ -344,7 +346,7 @@ def draw_entity(svg, x, y, color):
         "fill": color,
     }))
 
-def draw_flat(svg, x, y, *, color):
+def draw_flat(svg: ET.Element, x: int, y: int, *, color: str) -> None:
     ET.SubElement(svg, "rect", _attrs({
         "x": x,
         "y": y,
@@ -353,7 +355,7 @@ def draw_flat(svg, x, y, *, color):
         "fill": color,
     }))
 
-def draw_block(svg, x, y, *, color):
+def draw_block(svg: ET.Element, x: int, y: int, *, color: str) -> None:
     # Block.
     ET.SubElement(svg, "rect", _attrs({
         "x": x,
@@ -447,13 +449,13 @@ class Agent:
             yield
 
     @property
-    def dynamic(self):
+    def dynamic(self) -> Any:
         """
         Most recent percept.
 
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#step-percept.
         """
-        async def _get():
+        async def _get() -> Any:
             return await self.protocol.dynamic
 
         with self._not_shut_down():
@@ -461,13 +463,13 @@ class Agent:
         return future.result()
 
     @property
-    def static(self):
+    def static(self) -> Any:
         """
         Initial percept.
 
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#initial-percept.
         """
-        async def _get():
+        async def _get() -> Any:
             return await self.protocol.static
 
         with self._not_shut_down():
@@ -482,7 +484,7 @@ class Agent:
         ...     "hello": "world",
         >>> })
         """
-        async def _send():
+        async def _send() -> None:
             self.protocol.send_message(msg)
 
         with self._not_shut_down():
