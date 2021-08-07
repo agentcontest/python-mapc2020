@@ -163,8 +163,11 @@ class AgentProtocol(asyncio.Protocol):
                 })
                 await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
 
-            if self.state["percept"]["lastActionResult"] != "success":
-                raise AgentActionError(self.state["percept"]["lastActionResult"])
+            if self.state["percept"].get("lastActionResult") != "success":
+                if "lastActionResult" in self.state["percept"]:
+                    raise AgentActionError(self.state["percept"]["lastActionResult"])
+                else:
+                    raise AgentActionError()
 
             return self
 
