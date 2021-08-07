@@ -24,6 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 TIMEOUT = 15
 
+
 class AgentError(RuntimeError):
     """Runtime error caused by misbehaving agent or simulation server."""
 
@@ -35,6 +36,7 @@ class AgentAuthError(AgentError):
 
 class AgentActionError(AgentError):
     """Agent action failed."""
+
 
 class ColorMap:
     def __init__(self, colors: List[str]):
@@ -76,7 +78,6 @@ BLOCK_COLORS = ColorMap([
 ])
 
 class AgentProtocol(asyncio.Protocol):
-
     def __init__(self, user: str, pw: str):
         self.loop = asyncio.get_running_loop()
 
@@ -404,6 +405,7 @@ def draw_block(svg: ET.Element, x: int, y: int, *, color: str) -> None:
 def _attrs(attrs: Dict[str, Union[str, int, float, None]]) -> Dict[str, str]:
     return {k: str(v) for k, v in attrs.items() if v is not None}
 
+
 def run_in_background(coroutine: Callable[[concurrent.futures.Future[T]], Coroutine[Any, Any, None]]) -> T:
     """
     Runs ``coroutine(future)`` in a new event loop on a background thread.
@@ -425,6 +427,7 @@ def run_in_background(coroutine: Callable[[concurrent.futures.Future[T]], Corout
 
     threading.Thread(target=background).start()
     return future.result()
+
 
 class Agent:
     """
