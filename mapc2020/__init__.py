@@ -48,7 +48,6 @@ class AgentProtocol(asyncio.Protocol):
         self.transport: Optional[asyncio.BaseTransport] = None
         self.buffer = bytearray()
 
-        self.disconnected = asyncio.Event()
         self.fatal: Optional[AgentError] = None
 
         self.action_requested = asyncio.Event()
@@ -65,8 +64,8 @@ class AgentProtocol(asyncio.Protocol):
         self.fatal = None
 
         self.static: asyncio.Future[Any] = asyncio.Future()
+        self.disconnected: asyncio.Future[None] = asyncio.Future()
 
-        self.disconnected.clear()
         self.action_requested.clear()
         self.status_updated.clear()
         LOGGER.info("%s: Connection made", self)
@@ -85,7 +84,10 @@ class AgentProtocol(asyncio.Protocol):
 
     def connection_lost(self, exc):
         LOGGER.info("%s: Connection lost (error: %s)", self, exc)
-        self.disconnected.set()
+        if exc is None:
+            self.disconnected.set_result(None)
+        else:
+            self.disconnected.set_exception(exc)
 
     def data_received(self, data):
         self.buffer.extend(data)
@@ -546,7 +548,7 @@ class Agent:
             try:
                 await protocol.initialize()
                 future.set_result(agent)
-                await protocol.disconnected.wait()
+                await protocol.disconnected
             finally:
                 agent.close()
             await agent.shutdown_event.wait()
