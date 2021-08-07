@@ -187,6 +187,9 @@ class AgentProtocol(asyncio.Protocol):
     async def accept(self, task):
         return await self.send_action("accept", [task])
 
+    def __repr__(self):
+        return f"<AgentProtocol at {id(self):#x} (user={self.user!r})>"
+
     def _repr_svg_(self) -> str:
         vision = self.static.result()["vision"]
 
