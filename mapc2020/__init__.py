@@ -35,6 +35,45 @@ class AgentAuthError(AgentError):
 class AgentActionError(AgentError):
     """Agent action failed."""
 
+class ColorMap:
+    def __init__(self, colors):
+        self.colors = colors
+        self.assigned = {}
+        self.next = 0
+
+    def select(self, key):
+        if key not in self.assigned:
+            self.next += 1
+            self.assigned[key] = self.colors[self.next % len(self.colors)]
+        return self.assigned[key]
+
+TEAM_COLORS = ColorMap([
+    "blue",
+    "green",
+    "#ff1493",
+    "#8b0000",
+    "#ed553b",
+    "#a63d40",
+    "#e9b872",
+    "#90a959",
+    "#6494aa",
+    "#192457",
+    "#2b5397",
+    "#a2dcdc",
+    "#ffffff",
+    "#f67e4b",
+])
+
+BLOCK_COLORS = ColorMap([
+    "#41470b",
+    "#78730d",
+    "#bab217",
+    "#e3d682",
+    "#b3a06f",
+    "#9c7640",
+    "#5a4c35",
+])
+
 class AgentProtocol(asyncio.Protocol):
     def __init__(self, user: str, pw: str):
         self.loop = asyncio.get_running_loop()
@@ -263,19 +302,16 @@ class AgentProtocol(asyncio.Protocol):
                 "fill": "#333",
             }))
 
-        # Agent itself.
-        draw_entity(svg, 0, 0, "blue")
-
         # Things.
         for thing in dynamic["things"]:
             x = thing["x"]
             y = thing["y"]
             if thing["type"] == "entity":
-                draw_entity(svg, x, y, "blue" if thing["details"] == team else "red")
+                draw_entity(svg, x, y, color = TEAM_COLORS.select(thing["details"]))
             elif thing["type"] == "taskboard":
                 draw_block(svg, x, y, color = "#00ffff")
             elif thing["type"] == "dispenser":
-                draw_block(svg, x, y, color = "#41470b")
+                draw_block(svg, x, y, color = BLOCK_COLORS.select(thing["details"]))
 
         return ET.tostring(svg).decode("utf-8")
 
