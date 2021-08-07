@@ -217,8 +217,10 @@ class AgentProtocol(asyncio.Protocol):
         return f"<AgentProtocol at {id(self):#x} (user={self.user!r})>"
 
     def _repr_svg_(self) -> str:
-        vision = self.static.result()["vision"]
+        static = self.static.result()
         dynamic = self.dynamic.result()
+        team = static["team"]
+        vision = self.static.result()["vision"]
 
         svg = ET.Element("svg", _attrs({
             "xmlns": "http://www.w3.org/2000/svg",
@@ -262,14 +264,14 @@ class AgentProtocol(asyncio.Protocol):
             }))
 
         # Agent itself.
-        draw_entity(svg, 0, 0, "A")
+        draw_entity(svg, 0, 0, "blue")
 
         # Things.
         for thing in dynamic["things"]:
             x = thing["x"]
             y = thing["y"]
             if thing["type"] == "entity":
-                draw_entity(svg, x, y, thing["details"])
+                draw_entity(svg, x, y, "blue" if thing["details"] == team else "red")
             elif thing["type"] == "taskboard":
                 draw_block(svg, x, y, color = "#00ffff")
             elif thing["type"] == "dispenser":
@@ -277,7 +279,7 @@ class AgentProtocol(asyncio.Protocol):
 
         return ET.tostring(svg).decode("utf-8")
 
-def draw_entity(svg, x, y, details):
+def draw_entity(svg, x, y, color):
     ET.SubElement(svg, "line", _attrs({
         "x1": x + 0.5,
         "y1": y + 0,
@@ -293,6 +295,12 @@ def draw_entity(svg, x, y, details):
         "y2": y + 0.5,
         "stroke": "black",
         "stroke-width": 0.2,
+    }))
+    ET.SubElement(svg, "circle", _attrs({
+        "cx": x + 0.5,
+        "cy": y + 0.5,
+        "r": 0.3,
+        "fill": color,
     }))
 
 def draw_block(svg, x, y, *, color):

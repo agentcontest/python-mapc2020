@@ -19,7 +19,6 @@ Example
 Todo
 ----
 
-* [ ] Properly draw agents of different teams
 * [ ] Properly draw dispensers
 * [ ] Properly draw blocks of different types
 * [ ] Testing
