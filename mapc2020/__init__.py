@@ -45,20 +45,23 @@ class AgentProtocol(asyncio.Protocol):
         self.transport: Optional[asyncio.BaseTransport] = None
         self.buffer = bytearray()
 
-        self.disconnected = asyncio.Event()
-        self.action_requested = asyncio.Event()
         self.state = None
-        self.dynamic: Optional[Any] = None
+        self.action_lock = asyncio.Lock()
+        self.action_requested = asyncio.Event()
+        self.disconnected = asyncio.Event()
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = transport
         self.buffer.clear()
 
         self.static: asyncio.Future[Any] = asyncio.Future()
+        self.dynamic: asyncio.Future[Any] = asyncio.Future()
         self.finished: asyncio.Future[Any] = asyncio.Future()
 
-        self.disconnected.clear()
+        self.state = None
         self.action_requested.clear()
+        self.disconnected.clear()
+
         LOGGER.info("%s: Connection made", self)
 
         self.send_message({
@@ -117,31 +120,53 @@ class AgentProtocol(asyncio.Protocol):
         self.finished.set_result(content)
 
     def handle_request_action(self, content):
+        if self.dynamic.done():
+            self.dynamic = asyncio.Future()
+        self.dynamic.set_result(content["percept"])
+
         self.state = content
-        self.dynamic = self.state["percept"]
         self.action_requested.set()
 
     def handle_bye(self, _content):
-        self.finished.set_result(None)
+        if not self.finished.done():
+            self.finished.set_result(None)
 
     async def initialize(self):
         await self.static
-        await self.action_requested.wait()
+        await self.dynamic
 
     async def send_action(self, tpe: str, params: List[Any]) -> AgentProtocol:
-        await self.static
-        await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
-        self.action_requested.clear()
-        self.send_message({
-            "type": "action",
-            "content": {
-                "id": self.state["id"],
-                "type": tpe,
-                "p": params,
-            }
-        })
-        await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
-        return self
+        async with self.action_lock:
+            await self.static
+            await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
+
+            self.action_requested.clear()
+            self.send_message({
+                "type": "action",
+                "content": {
+                    "id": self.state["id"],
+                    "type": tpe,
+                    "p": params,
+                }
+            })
+            await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
+
+            if self.state["percept"]["lastAction"] != tpe:
+                self.action_requested.clear()
+                self.send_message({
+                    "type": "action",
+                    "content": {
+                        "id": self.state["id"],
+                        "type": tpe,
+                        "p": params,
+                    }
+                })
+                await asyncio.wait_for(self.action_requested.wait(), TIMEOUT)
+
+            if self.state["percept"]["lastActionResult"] != "success":
+                raise AgentActionError(self.state["percept"]["lastActionResult"])
+
+            return self
 
     async def skip(self) -> AgentProtocol:
         return await self.send_action("skip", [])
@@ -330,7 +355,7 @@ class Agent:
         See https://github.com/agentcontest/massim_2020/blob/master/docs/scenario.md#step-percept.
         """
         async def _get():
-            return self.protocol.dynamic
+            return await self.protocol.dynamic
 
         with self._not_shut_down():
             future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
