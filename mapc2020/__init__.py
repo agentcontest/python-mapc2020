@@ -8,6 +8,7 @@ import concurrent.futures
 import logging
 import json
 import threading
+import typing
 import xml.etree.ElementTree as ET
 
 from types import TracebackType
@@ -75,14 +76,15 @@ BLOCK_COLORS = ColorMap([
 ])
 
 class AgentProtocol(asyncio.Protocol):
+
     def __init__(self, user: str, pw: str):
         self.loop = asyncio.get_running_loop()
 
         self.user = user
         self.pw = pw
 
-        self.transport: Optional[asyncio.BaseTransport] = None
         self.buffer = bytearray()
+        self.transport: Optional[asyncio.Transport] = None
 
         self.state = None
         self.action_lock = asyncio.Lock()
@@ -90,7 +92,7 @@ class AgentProtocol(asyncio.Protocol):
         self.disconnected = asyncio.Event()
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        self.transport = transport
+        self.transport = typing.cast(asyncio.Transport, transport)
         self.buffer.clear()
 
         self.static: asyncio.Future[Any] = asyncio.Future()
@@ -113,6 +115,7 @@ class AgentProtocol(asyncio.Protocol):
 
     def send_message(self, message: Any) -> None:
         LOGGER.debug("%s: << %s", self, message)
+        assert self.transport is not None, "send_message before connection made"
         self.transport.write(json.dumps(message).encode("utf-8") + b"\0")
 
     def connection_lost(self, exc):
@@ -656,9 +659,8 @@ class Agent:
         Opens and initializes an agent connection.
         """
         async def _main(future: concurrent.futures.Future[Agent]) -> None:
-            transport, protocol = await asyncio.wait_for(
-                asyncio.get_running_loop().create_connection(lambda: AgentProtocol(user, pw), host, port),
-                TIMEOUT)
+            protocol = AgentProtocol(user, pw)
+            transport, _ = await asyncio.wait_for(asyncio.get_running_loop().create_connection(lambda: protocol, host, port), TIMEOUT)
             agent = cls(transport, protocol)
             try:
                 await protocol.initialize()
