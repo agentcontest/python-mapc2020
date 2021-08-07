@@ -49,14 +49,13 @@ class AgentProtocol(asyncio.Protocol):
         self.action_requested = asyncio.Event()
         self.state = None
         self.dynamic: Optional[Any] = None
-        self.end = None
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = transport
         self.buffer.clear()
 
         self.static: asyncio.Future[Any] = asyncio.Future()
-        self.finished: asyncio.Future[None] = asyncio.Future()
+        self.finished: asyncio.Future[Any] = asyncio.Future()
 
         self.disconnected.clear()
         self.action_requested.clear()
@@ -115,7 +114,7 @@ class AgentProtocol(asyncio.Protocol):
         self.static.set_result(content["percept"])
 
     def handle_sim_end(self, content):
-        self.end = content
+        self.finished.set_result(content)
 
     def handle_request_action(self, content):
         self.state = content
