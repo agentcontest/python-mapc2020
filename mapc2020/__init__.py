@@ -682,3 +682,10 @@ class Agent:
 
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_value: Optional[BaseException], traceback: Optional[TracebackType]) -> None:
         self.close()
+
+
+def hint1():
+    """
+    Lorem ipsum
+    """
+    return __doc__
