@@ -686,15 +686,15 @@ class Agent:
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_value: Optional[BaseException], traceback: Optional[TracebackType]) -> None:
         self.close()
 
-def hint1(self) -> str:
+def hint1() -> str:
     return '{"type": "status-request", "content": {}}'
-def hint2(self) -> str:
+def hint2() -> str:
     return "In the end it must be an array of bytes, but it's up to you which intermediate represenation you want to use.\nRemember that you can use json.dumps(.) to parse a json object to a string."
-def hint3(self) -> str:
+def hint3() -> str:
     return "We are using the asyncio library and it provides 2 main objects after a successful connection:\n-protocol\n-transport\nYou should the transport object to send the request as it handles the socket connection. To this end use the method transport.write(.)"
-def hint4(self) -> str:
+def hint4() -> str:
     return 'Remember we need to send out an array of bytes. To parse a string to an array of bytes you can use: yourstring.encode("utf-8")'
-def hint5(self) -> str:
+def hint5() -> str:
     return 'The MASSim server expects a 0 byte at the end of each message (not the caracther 0). Add to your array of bytes b"\\0" (a + operator will do the concatenation)'
-def answer(self) -> str:
+def answer() -> str:
     return """json_request = '{\"type\": \"status-request\", \"content\": {}}'\nself.transport.write(json_request.encode(\"utf-8\") + b\"\\0\")"""
