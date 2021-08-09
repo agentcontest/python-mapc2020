@@ -9,8 +9,10 @@ import logging
 import json
 import threading
 import typing
+import requests
 import re
 import xml.etree.ElementTree as ET
+import urllib.parse
 
 from types import TracebackType
 from typing import Any, Dict, List, Union, Generator, Type, Optional, Tuple, TypeVar, Coroutine, Callable
@@ -24,6 +26,17 @@ T = TypeVar("T")
 LOGGER = logging.getLogger(__name__)
 
 TIMEOUT = 15
+
+
+def unique_id(group: str, uuid: Optional[str] = None) -> int:
+    if uuid is None:
+        try:
+            uuid = requests.get("http://172.28.0.2:9000/api/sessions", timeout=10).json()[0]["path"]
+        except:
+            import getpass
+            uuid = getpass.getuser()
+
+    return int(requests.post(f"https://backscattering.de/dist-seq/{urllib.parse.quote(group, safe='')}/{urllib.parse.quote(uuid, safe='')}").text)
 
 
 class AgentError(RuntimeError):
@@ -697,6 +710,7 @@ class Agent:
 
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_value: Optional[BaseException], traceback: Optional[TracebackType]) -> None:
         self.close()
+
 
 def hint1() -> str:
     return '{"type": "status-request", "content": {}}'
