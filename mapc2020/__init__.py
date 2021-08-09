@@ -62,20 +62,20 @@ class ColorMap:
         return self.assigned[key]
 
 TEAM_COLORS = ColorMap([
-    "blue",
-    "green",
-    "#ff1493",
-    "#8b0000",
-    "#ed553b",
-    "#a63d40",
-    "#e9b872",
-    "#90a959",
-    "#6494aa",
-    "#192457",
-    "#2b5397",
-    "#a2dcdc",
-    "#ffffff",
-    "#f67e4b",
+    '#0000ff',
+    '#00ff00',
+    '#ff1493',
+    '#8b0000',
+    '#ed553b',
+    '#a63d40',
+    '#e9b872',
+    '#90a959',
+    '#6494aa',
+    '#192457',
+    '#2b5397',
+    '#a2dcdc',
+    '#27ec5f',
+    '#3ab1ad',
 ])
 
 BLOCK_COLORS = ColorMap([
