@@ -135,6 +135,7 @@ class AgentProtocol(asyncio.Protocol):
         exc = exc or AgentTerminatedError()
         if not self.static.done():
             self.static.set_exception(exc)
+            self.finished.cancel()
         if not self.finished.done():
             self.finished.set_exception(exc)
         self.disconnected.set()
@@ -165,7 +166,7 @@ class AgentProtocol(asyncio.Protocol):
         if content["result"] != "ok":
             exc = AgentAuthError()
             self.static.set_exception(exc)
-            self.finished.set_exception(exc)
+            self.finished.cancel()
 
     def handle_sim_start(self, content: Any) -> None:
         self.static.set_result(content["percept"])
