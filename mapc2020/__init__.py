@@ -38,7 +38,7 @@ class AgentAuthError(AgentError):
 class AgentActionError(AgentError):
     """Agent action failed."""
 
-FIRST_NUMBER_REGEX = re.compile(r"^[A-Za-z_-](\d+)")
+FIRST_NUMBER_REGEX = re.compile(r"^[A-Za-z_-]*(\d+)")
 
 class ColorMap:
     def __init__(self, colors: List[str]):
