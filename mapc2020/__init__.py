@@ -713,6 +713,7 @@ class Agent:
                 await protocol.initialize()
                 future.set_result(agent)
                 await protocol.disconnected.wait()
+                _silence(protocol.finished)
             finally:
                 agent.close()
             await agent.shutdown_event.wait()
@@ -724,6 +725,12 @@ class Agent:
 
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_value: Optional[BaseException], traceback: Optional[TracebackType]) -> None:
         self.close()
+
+async def _silence(future: asyncio.Future[T]) -> None:
+    try:
+        await future
+    except:
+        pass
 
 
 def hint1() -> str:
