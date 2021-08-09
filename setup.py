@@ -18,6 +18,7 @@ setuptools.setup(
     package_data={
         "mapc2020": ["py.typed"],
     },
+    install_requires=["requests"],
     python_requires=">=3.7",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
