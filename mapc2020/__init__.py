@@ -9,6 +9,7 @@ import logging
 import json
 import threading
 import typing
+import re
 import xml.etree.ElementTree as ET
 
 from types import TracebackType
@@ -37,6 +38,7 @@ class AgentAuthError(AgentError):
 class AgentActionError(AgentError):
     """Agent action failed."""
 
+FIRST_NUMBER_REGEX = re.compile(r"^[A-Za-z_-](\d+)")
 
 class ColorMap:
     def __init__(self, colors: List[str]):
@@ -45,6 +47,15 @@ class ColorMap:
         self.next = 0
 
     def select(self, key: str) -> str:
+        # Hardcode some colors for mini-lecture.
+        match = FIRST_NUMBER_REGEX.match(key)
+        if match:
+            idx = int(match.group(1))
+            if not key.startswith("b"):
+                idx -= 1  # Team names are 1 based, block names 0 based
+            return self.colors[idx % len(self.colors)]
+
+        # Fallback.
         if key not in self.assigned:
             self.assigned[key] = self.colors[self.next % len(self.colors)]
             self.next += 1
