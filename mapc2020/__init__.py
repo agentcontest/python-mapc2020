@@ -494,6 +494,20 @@ class Agent:
         return future.result()
 
     @property
+    def state(self) -> Optional[Any]:
+        async def _get() -> Optional[Any]:
+            return self.protocol.state
+
+        with self._not_shut_down():
+            future = asyncio.run_coroutine_threadsafe(_get(), self.protocol.loop)
+        return future.result()
+
+    def step(self) -> int:
+        """Current simulation step."""
+        state = self.state
+        return 0 if state is None else typing.cast(int, state.get("step", 0))
+
+    @property
     def static(self) -> Any:
         """
         Initial percept.
