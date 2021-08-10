@@ -742,4 +742,4 @@ def hint3() -> str:
 def hint4() -> str:
     return 'The MASSim server expects a 0 byte at the end of each message (not the caracther 0). Add to your array of bytes b"\\0" (a + operator will do the concatenation)'
 def answer() -> str:
-    return """json_request = '{\"type\": \"status-request\", \"content\": {}}'\nrequest_as_array_of_bytes = json_request.encode("utf-8") + b"\0" """
+    return """json_request = '{\"type\": \"status-request\", \"content\": {}}'\nrequest_as_array_of_bytes = json_request.encode("utf-8") + b"\\0" """
