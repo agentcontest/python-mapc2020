@@ -2,7 +2,7 @@ python-mapc2020
 ===============
 
 An experimental Python client for the 2020/21 edition of the Multi-Agent
-Programming Contest.
+Programming Contest. Used in our WESAAC 2021 short course.
 
 Install
 -------
@@ -24,14 +24,12 @@ Example
 .. image:: example.svg
     :alt: <Agent view>
 
-Todo
-----
+Missing features
+----------------
 
-* [ ] Testing
+This library may be useful to experiment, but probably not suitable for
+participating in the contest just yet. It currently does not handle:
 
-Stretch goals
--------------
-* [ ] Seamless reconnects
-* [ ] Seamless simulation change
-* [ ] In-depth typing
-* [ ] Provide more documentation
+* Simulation changes
+* Reestablishing interrupted connections
+* In-depth type-checking of percepts and messages
